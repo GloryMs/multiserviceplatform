@@ -1,24 +1,20 @@
-package com.multiserviceplatform.model;
+package com.multiserviceplatform.dto;
 
-import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
-@Entity
-@Table(name = "service_providers")
 @Data
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ServiceProvider {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class ServiceProviderDTO {
     private Integer providerId;
 
-    @OneToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @NotNull(message = "User ID is mandatory")
+    private Integer userId;
 
     @NotNull(message = "Verification status is mandatory")
     private Boolean isVerified;
@@ -28,5 +24,4 @@ public class ServiceProvider {
     @DecimalMin(value = "0.0", message = "Rating must be at least 0")
     @DecimalMax(value = "5.0", message = "Rating cannot exceed 5")
     private Float ratingAverage;
-
 }

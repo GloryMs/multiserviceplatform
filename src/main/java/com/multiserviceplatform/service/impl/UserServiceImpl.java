@@ -8,40 +8,51 @@ import com.multiserviceplatform.repository.UserRepository;
 import com.multiserviceplatform.repository.ProfileRepository;
 import com.multiserviceplatform.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.modelmapper.ModelMapper;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @Transactional
-public class UserServiceImpl implements UserService {
+public class UserServiceImpl implements UserService, UserDetailsService {
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
-    private final ModelMapper modelMapper;
+    //private final ModelMapper modelMapper;
 
     @Autowired
-    public UserServiceImpl(UserRepository userRepository, ProfileRepository profileRepository, ModelMapper modelMapper) {
+    public UserServiceImpl(UserRepository userRepository, ProfileRepository profileRepository) {
         this.userRepository = userRepository;
         this.profileRepository = profileRepository;
-        this.modelMapper = modelMapper;
+        //this.modelMapper = modelMapper;
     }
 
     @Override
     public UserDTO createUser(UserDTO userDTO) {
-        if (userRepository.existsByEmail(userDTO.getEmail())) {
+        ModelMapper modelMapper = new ModelMapper();
+        if (userRepository.existsByEmail(userDTO.getEmail()) && userRepository.existsByUserId(userDTO.getUserId())) {
             throw new IllegalArgumentException("Email already exists");
         }
         User user = modelMapper.map(userDTO, User.class);
-        user.setPasswordHash(hashPassword(userDTO.getPassword())); // Assume a password hashing utility
+        user.setPasswordHash(passwordEncoder().encode(userDTO.getPassword())); // Assume a password hashing utility
         User savedUser = userRepository.save(user);
         return modelMapper.map(savedUser, UserDTO.class);
     }
 
     @Override
     public UserDTO getUserById(Integer userId) {
+        ModelMapper modelMapper = new ModelMapper();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         return modelMapper.map(user, UserDTO.class);
@@ -49,14 +60,18 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDTO updateUser(Integer userId, UserDTO userDTO) {
+        ModelMapper modelMapper = new ModelMapper();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        if (!user.getEmail().equals(userDTO.getEmail()) && userRepository.existsByEmail(userDTO.getEmail())) {
+        Integer originUserId = user.getUserId();
+        userDTO.setUserId(originUserId);
+        if (!user.getEmail().equals(userDTO.getEmail()) &&
+                userRepository.existsByEmail(userDTO.getEmail())) {
             throw new IllegalArgumentException("Email already exists");
         }
         modelMapper.map(userDTO, user);
         if (userDTO.getPassword() != null) {
-            user.setPasswordHash(hashPassword(userDTO.getPassword()));
+            user.setPasswordHash(passwordEncoder().encode(userDTO.getPassword()));
         }
         User updatedUser = userRepository.save(user);
         return modelMapper.map(updatedUser, UserDTO.class);
@@ -72,6 +87,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserDTO> getAllUsers() {
+        ModelMapper modelMapper = new ModelMapper();
         return userRepository.findAll().stream()
                 .map(user -> modelMapper.map(user, UserDTO.class))
                 .collect(Collectors.toList());
@@ -79,6 +95,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ProfileDTO createProfile(Integer userId, ProfileDTO profileDTO) {
+        ModelMapper modelMapper = new ModelMapper();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         if (profileRepository.findByUser_UserId(userId).isPresent()) {
@@ -92,13 +109,28 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ProfileDTO getProfileByUserId(Integer userId) {
+        ModelMapper modelMapper = new ModelMapper();
         Profile profile = profileRepository.findByUser_UserId(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Profile not found"));
         return modelMapper.map(profile, ProfileDTO.class);
     }
 
-    private String hashPassword(String password) {
-        // Placeholder for password hashing logic (e.g., BCrypt)
-        return password; // Replace with actual hashing
+
+    @Override
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+        List<String> roles = new ArrayList<>();
+        roles.add("ROLE_" + user.getRole().toUpperCase());
+        GrantedAuthority authorities = new SimpleGrantedAuthority(roles.get(0));
+        return new org.springframework.security.core.userdetails.User(
+                user.getEmail(), user.getPasswordHash(),
+                true, true, true, true,
+                List.of(authorities));
     }
+
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
 }

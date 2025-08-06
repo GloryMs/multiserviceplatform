@@ -9,32 +9,31 @@ import com.multiserviceplatform.repository.ServiceProviderRepository;
 import com.multiserviceplatform.repository.ServiceCategoryRepository;
 import com.multiserviceplatform.service.ServiceService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.modelmapper.ModelMapper;
-
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Service
+@org.springframework.stereotype.Service
 @Transactional
 public class ServiceServiceImpl implements ServiceService {
     private final ServiceRepository serviceRepository;
     private final ServiceProviderRepository providerRepository;
     private final ServiceCategoryRepository categoryRepository;
-    private final ModelMapper modelMapper;
+    //private final ModelMapper modelMapper;
 
     @Autowired
     public ServiceServiceImpl(ServiceRepository serviceRepository, ServiceProviderRepository providerRepository,
-                              ServiceCategoryRepository categoryRepository, ModelMapper modelMapper) {
+                              ServiceCategoryRepository categoryRepository) {
         this.serviceRepository = serviceRepository;
         this.providerRepository = providerRepository;
         this.categoryRepository = categoryRepository;
-        this.modelMapper = modelMapper;
+        //this.modelMapper = modelMapper;
     }
 
     @Override
     public ServiceDTO createService(ServiceDTO serviceDTO) {
+        ModelMapper modelMapper = new ModelMapper();
         ServiceProvider provider = providerRepository.findById(serviceDTO.getProviderId())
                 .orElseThrow(() -> new IllegalArgumentException("Provider not found"));
         ServiceCategory category = categoryRepository.findById(serviceDTO.getCategoryId())
@@ -48,6 +47,7 @@ public class ServiceServiceImpl implements ServiceService {
 
     @Override
     public ServiceDTO getServiceById(Integer serviceId) {
+        ModelMapper modelMapper = new ModelMapper();
         Service service = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new IllegalArgumentException("Service not found"));
         return modelMapper.map(service, ServiceDTO.class);
@@ -55,6 +55,7 @@ public class ServiceServiceImpl implements ServiceService {
 
     @Override
     public List<ServiceDTO> getServicesByProviderId(Integer providerId) {
+        ModelMapper modelMapper = new ModelMapper();
         return serviceRepository.findByProvider_ProviderId(providerId).stream()
                 .map(service -> modelMapper.map(service, ServiceDTO.class))
                 .collect(Collectors.toList());

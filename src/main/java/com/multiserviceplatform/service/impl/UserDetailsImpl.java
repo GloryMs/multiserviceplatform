@@ -1,6 +1,6 @@
-package com.secure.notes.security.services;
+package com.multiserviceplatform.service.impl;
 
-import com.secure.notes.model.User;
+import com.multiserviceplatform.model.User;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -8,6 +8,7 @@ import net.minidev.json.annotate.JsonIgnore;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -18,35 +19,27 @@ public class UserDetailsImpl implements UserDetails {
 
     private static final long serialVersionUID = 1L;
     @Getter
-    private Long id;
-    private String username;
+    private Integer id;
     @Getter
     private String email;
     @JsonIgnore
     private String password;
-    @Getter
-    private boolean is2FaEnabled;
     private Collection<? extends GrantedAuthority> authorities;
 
 
-    public UserDetailsImpl(Long id, String username, String email, String password,
-                           boolean is2FaEnabled, Collection<? extends GrantedAuthority> authorities) {
+    public UserDetailsImpl(Integer id,String email, String password, Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
-        this.username = username;
         this.email = email;
         this.password = password;
-        this.is2FaEnabled = is2FaEnabled;
         this.authorities = authorities;
     }
 
     public static UserDetailsImpl build(User user) {
-        GrantedAuthority authorities = new SimpleGrantedAuthority(user.getRole().getRoleName().toString());
+        GrantedAuthority authorities = new SimpleGrantedAuthority(user.getRole());
         return new UserDetailsImpl(
                 user.getUserId(),
-                user.getUsername(),
                 user.getEmail(),
-                user.getPassword(),
-                user.isTwoFactorEnabled(),
+                user.getPasswordHash(),
                 List.of(authorities)
         );
     }
@@ -64,7 +57,7 @@ public class UserDetailsImpl implements UserDetails {
 
     @Override
     public String getUsername() {
-        return username;
+        return email;
     }
 
     @Override

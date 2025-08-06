@@ -1,4 +1,4 @@
-package com.multiserviceplatform.service.impl;
+package com.multiserviceplatform.service;
 
 import com.multiserviceplatform.dto.ServiceDTO;
 
